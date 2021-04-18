@@ -1,0 +1,24 @@
+﻿<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>..\_\obj_$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>..\_\obj_$(MSBuildProjectName)\$(Configuration)_$(Platform)\</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>TPToS</RootNamespace>
+    <OutputPath>..\_\bin_$(MSBuildProjectName)\$(Configuration)_$(Platform)\</OutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\TPCmn\TPCmn.csproj" />
+    <ProjectReference Include="..\TPToSPatch\TPToSPatch.csproj" />
+    <ProjectReference Include="..\TPToSSQLite\TPToSSQLite.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>..\_\obj_$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>..\_\obj_$(MSBuildProjectName)\$(Configuration)_$(Platform)\</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <OutputPath>..\_\bin_$(MSBuildProjectName)\$(Configuration)_$(Platform)\</OutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="5.0.0" />
+  </ItemGroup>
+</Project>

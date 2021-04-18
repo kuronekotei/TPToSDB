@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>..\_\obj_$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>..\_\obj_$(MSBuildProjectName)\$(Configuration)_$(Platform)\</IntermediateOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <RootNamespace>TPToS</RootNamespace>
+    <OutputPath>..\_\bin_$(MSBuildProjectName)\$(Configuration)_$(Platform)\</OutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\TPCmn\TPCmn.csproj" />
+  </ItemGroup>
+</Project>
