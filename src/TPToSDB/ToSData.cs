@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using TPCmn;
+using static TPCmn.Stc;
 
 namespace TPToS {
 	public static class ToSData {
@@ -14,6 +15,7 @@ namespace TPToS {
 		public static readonly Dictionary<E_Serv,RootPath>DicPath = new Dictionary<E_Serv, RootPath>();
 
 		public static void Init() {
+			Log.SaveLog("▼▼▼Init");
 			using (DaServer da = new DaServer()) {
 				da.InitServer();
 				LstServ = da.GetServerList();
@@ -24,6 +26,58 @@ namespace TPToS {
 				DicServ.Add(es, serv);
 				DicPath.Add(es, new RootPath(es,Cmn.CurDir));
 			}
+			Log.SaveLog("▲▲▲Init");
+		}
+		public static async Task<bool> Download(E_Serv es) {
+			Log.SaveLog("▼▼▼Download");
+			List<ToSDlInfo> lstDl = null;
+			using (DaDownload daDl = new DaDownload()) {
+				await Task.Run(() => {
+					ToSPatch ptc = new ToSPatch(DicServ[es].SrvURL);
+					ptc.GetPacthList(0);
+					lstDl = ptc.GetDownloadList(DicPath[es].DFul, DicPath[es].DPat, DicPath[es].DRel);
+					for (int i = 0; i<lstDl.Count; i++) {
+						ToSDlInfo xDl = lstDl[i];
+						DtDownload dtDl = new DtDownload(){
+							SrvID=es.ToString()
+							,RemotePath=xDl.RemotePath
+							,LocalPath=xDl.LocalPath
+							,LastMod=xDl.LastMod.ToString()
+							,Stat=E_DL_STAT.None
+						};
+						var tmpDl = daDl.GetDownloadOne(dtDl);
+						if (tmpDl?.Stat == E_DL_STAT.Skip || tmpDl?.Stat == E_DL_STAT.Success) {
+							lstDl.RemoveAt(i);
+							i--;
+						}
+					}
+				});
+				Log.SaveLog($"{TB}Download {lstDl.Count}ファイル");
+				for (int i = 0; i<lstDl.Count; i++) {
+					ToSDlInfo xDl = lstDl[i];
+					Log.SaveLog($"{TB}Download {i+1}/{lstDl.Count} {xDl.RemotePath}");
+					ToSPatch ptc = new ToSPatch(DicServ[es].SrvURL);
+					DtDownload dtDl = new DtDownload(){
+						SrvID=es.ToString()
+						,RemotePath=xDl.RemotePath
+						,LocalPath=xDl.LocalPath
+						,LastMod=xDl.LastMod.ToString()
+						,Stat=E_DL_STAT.None
+					};
+					try {
+						ptc.Download(xDl);
+						dtDl.Stat = E_DL_STAT.Success;
+						dtDl.Msg = "Success";
+					} catch (Exception ex) {
+						dtDl.Stat = E_DL_STAT.Error;
+						dtDl.Msg = ex.Message;
+					}
+					daDl.MergeDownload(dtDl);
+					Log.SaveLog($"{TB}Download {i+1}/{lstDl.Count} {dtDl.Msg}");
+				}
+			}
+			Log.SaveLog("▲▲▲Download");
+			return true;
 		}
 	}
 	public class RootPath {

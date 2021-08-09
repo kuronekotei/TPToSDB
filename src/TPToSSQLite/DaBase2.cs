@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SQLite;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,6 +30,7 @@ namespace TPToS {
 				}
 			}
 		}
+
 		public List<string> GetCols<T>() where T : DtBase,new() {
 			T dto = new T();
 			string sql;
@@ -36,6 +38,7 @@ namespace TPToS {
 			DataTable dt = Select(sql);
 			return (from DataRow dr in dt.Rows select dr["name"].__ToStr()).ToList();
 		}
+
 		public List<T> ExeSelectList<T>() where T : DtBase, new() {
 			T dto = new T();
 			List<T> lst = new List<T>();
@@ -46,6 +49,22 @@ namespace TPToS {
 
 			return lst;
 		}
+
+		public List<T> ExeSelectList<T>(Dictionary<string, string> where) where T : DtBase, new() {
+			T dto = new T();
+			List<T> lst = new List<T>();
+			List<SQLiteParameter> prms = new List<SQLiteParameter>();
+
+			foreach (KeyValuePair<string, string> x in where) {
+				prms.Add(new SQLiteParameter(x.Key, x.Value));
+			}
+			DataTable dt = Select(dto.MakeSelectWhere(where), prms);
+
+			DataHandle.Table2List(dt, lst);
+
+			return lst;
+		}
+
 		public List<T> ExeSelectListM<T>(List<T> baselst) where T : DtBase, new() {
 			T dto = new T();
 			List<T> lst = new List<T>();
@@ -70,6 +89,14 @@ namespace TPToS {
 			}
 
 			return lst;
+		}
+
+		public int ExeMerge<T>(T data) where T : DtBase, new() {
+
+			List<SQLiteParameter> prms = new List<SQLiteParameter>();
+			int ret = Command(data.MakeMerge(prms),prms);
+
+			return ret;
 		}
 	}
 }

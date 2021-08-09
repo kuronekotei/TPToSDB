@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
+using TPCmn;
 using static TPToS.ToSData;
 
 namespace TPToS {
@@ -21,12 +23,23 @@ namespace TPToS {
 	/// </summary>
 	public partial class MainWindow : Window {
 		public MainWindow() {
+			InitializeComponent();
+		}
+		ObservableCollection<string> LstLog = new ObservableCollection<string>();
 
+		public void LogInsert(string s) {
+			_=Task.Run(() => {
+				try {
+					Dispatcher.Invoke(() => { if (IsLoaded) { LstLog.Add(s); while (LstLog.Count > 100) { LstLog.RemoveAt(0); } } });
+				} catch { }
+			});
+		}
+
+		private async void Window_Loaded(object sender, RoutedEventArgs e) {
+			GridLog.ItemsSource = LstLog;
+			Log.LogInsert = LogInsert;
 			Init();
-			ToSPatch ptc = new ToSPatch(DicServ[E_Serv.JP].SrvURL);
-			ptc.GetPacthList(0);
-			ptc.DownloadFull(DicPath[E_Serv.JP].DFul);
-			MessageBox.Show("完了");
+			await Download(E_Serv.JP);
 		}
 	}
 }

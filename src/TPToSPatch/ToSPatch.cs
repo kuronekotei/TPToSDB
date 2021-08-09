@@ -96,26 +96,56 @@ namespace TPToS {
 			}
 		}
 
-		public void DownloadFull(string path,bool fForce=false) {
-			Directory.CreateDirectory(path);
+		public List<ToSDlInfo> GetDownloadList(string pathDFul, string pathDPat, string pathDRel, bool fForce = false) {
+			Directory.CreateDirectory(pathDFul);
+			Directory.CreateDirectory(pathDPat);
+			Directory.CreateDirectory(pathDRel);
+
+			List<ToSDlInfo> lst = new List<ToSDlInfo>();
 			foreach (ToSFullInfo tfi in LstFullInfo) {
-				string tmpPath = Path.Combine(path, tfi.FileName);
+				tfi.DlInfo.LocalPath = Path.Combine(pathDFul, tfi.DlInfo.FileName);
 				//	更新日チェック
-				DateTime? tmpTime = GetFileTime(tmpPath);
-				if (tfi.LastMod == tmpTime && !fForce) {
+				DateTime? tmpTime = GetFileTime(tfi.DlInfo.LocalPath);
+				if (tfi.DlInfo.LastMod == tmpTime && !fForce) {
 					continue;
 				}
-				//	既存ファイルの削除
-				if (!DeleteExistFile(tmpPath)){
-					throw new Exception($"ダウンロード対象が存在し、削除に失敗しました。\n${tmpPath}");
-				}
-				//	ダウンロード
-				if (!DownloadFile(tmpPath, tfi.FileUrl)) {
-					throw new Exception($"ダウンロードに失敗しました。\n${tmpPath}\n${tfi.FileUrl}");
-				}
-				//	更新日を対象ファイルのタイムスタンプに
-				File.SetLastWriteTime(tmpPath, tfi.LastMod);
+				lst.Add(tfi.DlInfo);
 			}
+			foreach (ToSPatchInfo tpi in LstPatchInfo) {
+				{
+					tpi.DlInfoP.LocalPath = Path.Combine(pathDPat, tpi.DlInfoP.FileName);
+					//	更新日チェック
+					DateTime? tmpTime = GetFileTime(tpi.DlInfoP.LocalPath);
+					if (tpi.DlInfoP.LastMod == tmpTime && !fForce) {
+						continue;
+					}
+					lst.Add(tpi.DlInfoP);
+				}
+				if (tpi.fRelease) {
+					tpi.DlInfoR.LocalPath = Path.Combine(pathDRel, tpi.DlInfoR.FileName);
+					//	更新日チェック
+					DateTime? tmpTime = GetFileTime(tpi.DlInfoR.LocalPath);
+					if (tpi.DlInfoR.LastMod == tmpTime && !fForce) {
+						continue;
+					}
+					lst.Add(tpi.DlInfoR);
+				}
+			}
+			return lst;
+		}
+
+		public bool Download(ToSDlInfo tdi) {
+			//	既存ファイルの削除
+			if (!DeleteExistFile(tdi.LocalPath)) {
+				throw new Exception($"ダウンロード対象が存在し、削除に失敗しました。\n${tdi.LocalPath}");
+			}
+			//	ダウンロード
+			if (!DownloadFile(tdi.LocalPath, tdi.RemotePath)) {
+				throw new Exception($"ダウンロードに失敗しました。\n${tdi.LocalPath}\n${tdi.RemotePath}");
+			}
+			//	更新日を対象ファイルのタイムスタンプに
+			File.SetLastWriteTime(tdi.LocalPath, tdi.LastMod);
+			return true;
 		}
 
 		/// <summary>日付を取る　取れなきゃNull</summary>
@@ -161,74 +191,72 @@ namespace TPToS {
 		}
 
 	}
+	public class ToSDlInfo {
+		public string FileName;
+		public string RemotePath;
+		public string LocalPath;
+		public long FileSize;
+		public DateTime LastMod;
+	}
 	public class ToSFullInfo {
 		public ToSFullInfo(string fileName, string urlRoot) {
-			FileName = fileName+".ipf";
-			FileUrl = Path.Combine(urlRoot, FileName);
+			DlInfo.FileName = fileName+".ipf";
+			DlInfo.RemotePath = Path.Combine(urlRoot, DlInfo.FileName);
 		}
 		public DateTime SetLastMod() {
 			try {
-				HttpWebRequest req = (HttpWebRequest)WebRequest.Create(FileUrl);
+				HttpWebRequest req = (HttpWebRequest)WebRequest.Create(DlInfo.RemotePath);
 				req.Proxy = WebRequest.GetSystemWebProxy();
 				req.Timeout = 2000;
 				req.Method = "HEAD";
 				using HttpWebResponse res = (HttpWebResponse)req.GetResponse();
-				LastMod = res.LastModified;
-				FileSize = res.ContentLength;
+				DlInfo.LastMod = res.LastModified;
+				DlInfo.FileSize = res.ContentLength;
 			} catch (Exception ex) {
 				Log.SaveLog(ex);
 			}
-			return LastMod;
+			return DlInfo.LastMod;
 		}
-		public string FileName;
-		public string FileUrl;
-		public long FileSize;
-		public DateTime LastMod;
+		public ToSDlInfo DlInfo = new ToSDlInfo();
 	}
 	public class ToSPatchInfo {
 		public ToSPatchInfo(string rev, string urlRootP, string urlRootR,bool fR) {
 			RevText = rev.Replace(" 1","");
-			FileNameP = RevText+"_001001.ipf";
-			FileUrlP = Path.Combine(urlRootP, FileNameP);
-			FileNameR = RevText+"_001001.pak";
-			FileUrlR = Path.Combine(urlRootR, FileNameR);
+			DlInfoP.FileName = RevText+"_001001.ipf";
+			DlInfoP.RemotePath = Path.Combine(urlRootP, DlInfoP.FileName);
+			DlInfoR.FileName = RevText+"_001001.pak";
+			DlInfoR.RemotePath = Path.Combine(urlRootR, DlInfoR.FileName);
 			fRelease = fR;
 		}
 		public void SetLastMod() {
 			try {
-				HttpWebRequest req = (HttpWebRequest)WebRequest.Create(FileUrlP);
+				HttpWebRequest req = (HttpWebRequest)WebRequest.Create(DlInfoP.RemotePath);
 				req.Proxy = WebRequest.GetSystemWebProxy();
 				req.Timeout = 2000;
 				req.Method = "HEAD";
 				using HttpWebResponse res = (HttpWebResponse)req.GetResponse();
-				LastModP = res.LastModified;
-				FileSizeP = res.ContentLength;
+				DlInfoP.LastMod = res.LastModified;
+				DlInfoP.FileSize = res.ContentLength;
 			} catch (Exception) {
 			}
 			try {
 				if (fRelease) {
-					HttpWebRequest req = (HttpWebRequest)WebRequest.Create(FileUrlR);
+					HttpWebRequest req = (HttpWebRequest)WebRequest.Create(DlInfoR.RemotePath);
 					req.Proxy = WebRequest.GetSystemWebProxy();
 					req.Timeout = 2000;
 					req.Method = "HEAD";
 					using HttpWebResponse res = (HttpWebResponse)req.GetResponse();
-					LastModR = res.LastModified;
-					FileSizeR = res.ContentLength;
+					DlInfoR.LastMod = res.LastModified;
+					DlInfoR.FileSize = res.ContentLength;
 				}
 			} catch(Exception) {
 				fRelease = false;
 			}
 		}
 		public int RevInt { get { return RevText._ToInt(0); } }
+		public ToSDlInfo DlInfoP = new ToSDlInfo();
+		public ToSDlInfo DlInfoR = new ToSDlInfo();
 		public string RevText;
-		public string FileNameP;
-		public string FileUrlP;
-		public long FileSizeP;
-		public DateTime LastModP;
 		public bool fRelease;
-		public string FileNameR;
-		public string FileUrlR;
-		public long FileSizeR;
-		public DateTime LastModR;
 	}
 }

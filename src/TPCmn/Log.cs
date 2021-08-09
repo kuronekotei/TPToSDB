@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using static TPCmn.Stc;
 
 namespace TPCmn {
+	public delegate void LogInsert(string s);
 	/// <summary>
 	/// ログ処理を担うクラス
 	/// </summary>
@@ -24,6 +25,7 @@ namespace TPCmn {
 		public	static	string LogFileName = "";
 		public	static	int LogDelDate = 0;
 		public	static	readonly Mutex mut = new Mutex(false,"TPCmnLog");
+		public	static	LogInsert LogInsert;
 
 		/// <summary>
 		/// 初期化を行う
@@ -139,6 +141,32 @@ namespace TPCmn {
 				//何もしない
 			}
 		}
+
+
+		private static void _SaveLog(string s) {
+			if (LogInsert != null) {
+				LogInsert(s);
+			}
+			if (!fLog) {
+				return;
+			}
+			CheckReOpen();
+			bool mutFlg = false;
+			try {
+				mutFlg = mut.WaitOne();
+				if (mutFlg) {
+					fs.Seek(0, SeekOrigin.End);
+					sw.Write(s);
+					sw.Flush();
+				}
+			} catch (Exception) {
+			} finally {
+				if (mutFlg) {
+					mut.ReleaseMutex();
+				}
+			}
+		}
+
 		/// <summary>
 		/// ログを保存する。(文字列)
 		/// 引数として必要なのは、保存する文字列のみ
@@ -154,25 +182,10 @@ namespace TPCmn {
 			[CallerLineNumber] int line = 0,
 			[CallerMemberName] string member = ""
 		) {
-			if (!fLog) {
-				return;
-			}
-			CheckReOpen();
-			bool mutFlg = false;
-			try {
-				mutFlg = mut.WaitOne();
-				if (mutFlg) {
-					fs.Seek(0, SeekOrigin.End);
-					sw.Write($"{DateTime.Now:MM/dd HH:mm:ss.fff}{TB}{Path.GetFileName(file)}({line})");
-					sw.Write($"{TB}{s.Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}");
-					sw.Flush();
-				}
-			} catch (Exception) {
-			} finally {
-				if (mutFlg) {
-					mut.ReleaseMutex();
-				}
-			}
+			var x ="";
+			x += $"{DateTime.Now:MM/dd HH:mm:ss.fff}{TB}{Path.GetFileName(file)}({line})";
+			x += $"{TB}{s.Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}";
+			_SaveLog(x);
 		}
 
 		/// <summary>
@@ -190,32 +203,17 @@ namespace TPCmn {
 			[CallerLineNumber] int line = 0,
 			[CallerMemberName] string member = ""
 		) {
-			if (!fLog) {
-				return;
-			}
-			CheckReOpen();
-			bool mutFlg = false;
-			try {
-				mutFlg = mut.WaitOne();
-				if (mutFlg) {
-					fs.Seek(0, SeekOrigin.End);
-					sw.Write($"{DateTime.Now:MM/dd HH:mm:ss.fff}{TB}{Path.GetFileName(file)}({line}){TB}{member}{BR}");
-					sw.Write($"{TB}EXP：{TB}{ex.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}");
-					if (ex.InnerException != null) {
-						sw.Write($"{TB}EXP1：{TB}{ex.InnerException.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}");
-						if (ex.InnerException.InnerException != null) {
-							sw.Write($"{TB}EXP2：{TB}{ex.InnerException.InnerException.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}");
-						}
-					}
-					sw.Write($"{BR}");
-					sw.Flush();
-				}
-			} catch (Exception) {
-			} finally {
-				if (mutFlg) {
-					mut.ReleaseMutex();
+			var x ="";
+			x += $"{DateTime.Now:MM/dd HH:mm:ss.fff}{TB}{Path.GetFileName(file)}({line}){TB}{member}{BR}";
+			x += $"{TB}EXP：{TB}{ex.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}";
+			if (ex.InnerException != null) {
+				x += $"{TB}EXP1：{TB}{ex.InnerException.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}";
+				if (ex.InnerException.InnerException != null) {
+					x += $"{TB}EXP2：{TB}{ex.InnerException.InnerException.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}";
 				}
 			}
+			x += $"{BR}";
+			_SaveLog(x);
 		}
 
 		/// <summary>
@@ -235,33 +233,17 @@ namespace TPCmn {
 			[CallerLineNumber] int line = 0,
 			[CallerMemberName] string member = ""
 		) {
-			if (!fLog) {
-				return;
-			}
-			CheckReOpen();
-			bool mutFlg = false;
-			try {
-				mutFlg = mut.WaitOne();
-				if (mutFlg) {
-					fs.Seek(0, SeekOrigin.End);
-					sw.Write($"{DateTime.Now:MM/dd HH:mm:ss.fff}{TB}{Path.GetFileName(file)}({line}){TB}{member}{BR}");
-					sw.Write($"{TB}{TB}{s.Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}");
-					sw.Write($"{TB}EXP：{TB}{ex.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}");
-					if (ex.InnerException != null) {
-						sw.Write($"{TB}EXP1：{TB}{ex.InnerException.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}");
-						if (ex.InnerException.InnerException != null) {
-							sw.Write($"{TB}EXP2：{TB}{ex.InnerException.InnerException.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}");
-						}
-					}
-					sw.Write($"{BR}");
-					sw.Flush();
-				}
-			} catch (Exception) {
-			} finally {
-				if (mutFlg) {
-					mut.ReleaseMutex();
+			var x ="";
+			x += $"{DateTime.Now:MM/dd HH:mm:ss.fff}{TB}{Path.GetFileName(file)}({line})";
+			x += $"{TB}{s.Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}";
+			x += $"{TB}EXP：{TB}{ex.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}";
+			if (ex.InnerException != null) {
+				x += $"{TB}EXP1：{TB}{ex.InnerException.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}";
+				if (ex.InnerException.InnerException != null) {
+					x += $"{TB}EXP2：{TB}{ex.InnerException.InnerException.ToString().Replace($"{BR}", $"{BR}{TB}{TB}")}{BR}";
 				}
 			}
+			_SaveLog(x);
 		}
 
 		/// <summary>

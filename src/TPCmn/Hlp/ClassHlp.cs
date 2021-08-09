@@ -96,6 +96,11 @@ namespace TPCmn {
 					if (!prp.CanWrite) {
 						continue;
 					}
+					if (prp.PropertyType.IsEnum) {
+						memRet.fUseVal = true;
+						memRet.ValI = (int)prp.GetValue(tgt);
+						continue;
+					}
 					if (prp.PropertyType == typeof(int)) {
 						memRet.fUseVal = true;
 						memRet.ValI = (int)prp.GetValue(tgt);
@@ -133,6 +138,11 @@ namespace TPCmn {
 					}
 				}
 				if (memRet.FldInf is FieldInfo fld) {
+					if (fld.FieldType.IsEnum) {
+						memRet.fUseVal = true;
+						memRet.ValI = (int)fld.GetValue(tgt);
+						continue;
+					}
 					if (fld.FieldType == typeof(int)) {
 						memRet.fUseVal = true;
 						memRet.ValI = (int)fld.GetValue(tgt);
